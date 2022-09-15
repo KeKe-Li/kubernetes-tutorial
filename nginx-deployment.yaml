@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1                  # K8S对应的API版本
+kind: Deployment                                # 对应的类型
+metadata:
+  name: nginx-deployment
+  labels:
+    name: nginx-deployment
+spec:
+  replicas: 2                                   # 镜像副本数量
+  template:
+    metadata:
+      labels:                                   # 容器的标签 可和service关联
+        app: nginx
+    spec:
+      containers:
+        - name: nginx                          # 容器名和镜像
+          image: nginx
+          imagePullPolicy: Always

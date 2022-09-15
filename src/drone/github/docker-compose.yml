@@ -1,0 +1,39 @@
+version: '2'
+services:
+  drone-server:
+    image: drone/drone:0.8.2
+    container_name: drone-server
+    ports:
+      - 80:8000
+      - 9000:9000
+    volumes:
+      - /etc/drone:/var/lib/drone/
+    restart: always
+    environment:
+      # 是否允许注册，false 后只有在 DRONE_ADMIN 变量中指定的账户才能登录
+      - DRONE_OPEN=true
+      # admin
+      - DRONE_ADMIN=drone,mritd
+      # Drone可公开访问的地址
+      - DRONE_HOST=http://172.16.0.128
+      # 配置 Git 仓库，只能同时使用一种仓库
+      # Github 仓库需要配置上问申请到的 client id 和 client secret
+      - DRONE_GITHUB=true
+      - DRONE_GITHUB_CLIENT=e05f88b510912e126261
+      - DRONE_GITHUB_SECRET=abbcb47a20b87ae8272e2a17e06c4dfbbdc64f04
+      # Drone Server 和 Agent 的通信密钥
+      - DRONE_SECRET={DRONE_SECRET}
+  drone-agent:
+    image: drone/agent:0.8.2
+    container_name: drone-agent
+    command: agent
+    restart: always
+    depends_on:
+      - drone-server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # 配置 SERVER 地址
+      - DRONE_SERVER=http://172.16.0.128:9000
+      # 配置与 SERVER 通信的密钥，需要与 Server 配置的保持一致
+      - DRONE_SECRET={DRONE_SECRET}

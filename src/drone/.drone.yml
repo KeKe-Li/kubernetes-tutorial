@@ -1,0 +1,123 @@
+# in the project path
+workspace:
+  base: /data/apps/opt
+  path: web-im
+
+pipeline:
+
+  restore-cache:
+    image: drillster/drone-volume-cache
+    restore: true
+    mount:
+      - node_modules
+      - tag
+    volumes:
+      - /data/apps/opt/web-im:/cache
+
+  build:
+    image: node:7.8
+    privileged: true
+    commands:
+      - npm run build
+      - mkdir -p publish/demo/javascript
+      - cp -r demo/images publish/demo
+      - cp -r demo/stylesheet publish/demo
+      - cp -r demo/javascript/dist publish/demo/javascript/
+      - cp -r demo/javascript/src publish/demo/javascript/
+      - mkdir publish/sdk
+      - cp -r sdk/dist publish/sdk
+      - cp -r sdk/src publish/sdk
+      - cp sdk/*.* publish/sdk
+      - cp -r webrtc  publish
+      - cp favicon.ico publish/
+      - cp index.html publish/
+      - cp CHANGELOG.md publish/
+      - cp package.json publish/
+      - cp webpack.config.js publish/
+      - cp 0.1.md publish/
+      - cp .babelrc publish/
+      - cp -rf publish image/docker/webim/webim
+      - echo 'build success'
+    when:
+      branch: [ dev, online ]
+
+
+  dockerize-latest:
+    image: plugins/docker
+    environment:
+      - DOCKER_LAUNCH_DEBUG=true
+    debug: true
+    repo: docker-registry-cn.easemob.com/Kubernetes/im/webim
+    tags: latest
+    registry: docker-registry-cn.easemob.com
+    secrets: [ docker_username, docker_password ]
+    dockerfile: image/docker/webim/Dockerfile
+    context: image/docker/webim/
+    when:
+      branch: dev
+
+  deploy-latest:
+    image: docker-registry-cn.easemob.com/Kubernetes/im/webim-deploy:latest
+    pull: true
+    environment:
+      - DOCKER_LAUNCH_DEBUG=true
+      - TAG=latest
+    secrets: [ ssh_key, jumpserver_host, jumpserver_port, sandbox_host ]
+    debug: true
+    when:
+      branch: dev
+
+  dockerize-online:
+    image: plugins/docker
+    environment:
+      - DOCKER_LAUNCH_DEBUG=true
+    debug: true
+    repo: docker-registry-cn.easemob.com/Kubernetes/im/webim
+    tags: ${DRONE_COMMIT:0:7}
+    registry: docker-registry-cn.easemob.com
+    secrets: [ docker_username, docker_password ]
+    dockerfile: image/docker/webim/Dockerfile
+    context: image/docker/webim/
+    when:
+      branch: online
+
+  deploy-online:
+    image: docker-registry-cn.easemob.com/Kubernetes/im/webim-online:latest
+    pull: true
+    environment:
+      - DOCKER_LAUNCH_DEBUG=true
+      - TAG=${DRONE_COMMIT:0:7}
+    secrets: [ ssh_key, jumpserver_host, jumpserver_port, online_host ]
+    debug: true
+    when:
+      branch: online
+
+  rollback-online:
+    image: docker-registry-cn.easemob.com/Kubernetes/im/webim-rollback:latest
+    pull: true
+    environment:
+      - DOCKER_LAUNCH_DEBUG=true
+    secrets: [ ssh_key, jumpserver_host, jumpserver_port, online_host ]
+    debug: true
+    when:
+      branch: rollback
+
+  rebuild-cache:
+      image: drillster/drone-volume-cache
+      rebuild: true
+      mount:
+        - node_modules
+        - tag
+      volumes:
+        - /data/apps/opt/web-im:/cache
+
+  notify:
+    image: drillster/drone-email
+    port: 25
+    secrets: [ plugin_host, plugin_from, plugin_username, plugin_password ]
+    when:
+      status:  [ failure, success ]
+
+# dev分支提交，会自动build，打包image，push到harbor仓库，更新沙箱，发邮件通知
+# online分支提交，会自动build，打包image，push到harbor仓库，更新线上，更新image tag(线上回滚需要)，发邮件通知
+# rollback分支提交，会使用image tag，回滚到上一次的线上版本, 发邮件通知

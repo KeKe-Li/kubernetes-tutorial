@@ -1,0 +1,24 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    name: nginx
+spec:
+  replicas: 2                                   # 镜像副本数量
+  template:
+    metadata:
+      labels:                                   # 容器的标签 可和service关联
+        app: nginx
+    spec:
+      containers:
+        - name: nginx                           # 容器名
+          image: nginx:1.8                      # 容器镜像
+          volumeMounts:
+          # name must match the volume name below
+            - name: nfs
+              mountPath: "/mnt"
+      volumes:
+      - name: nfs
+        persistentVolumeClaim:
+          claimName: nfs

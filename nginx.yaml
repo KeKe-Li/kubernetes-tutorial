@@ -1,0 +1,34 @@
+---
+apiVersion: v1 #指定api版本，此值必须在kubectl apiversion中
+kind: Service  #指定创建资源的角色/类型
+metadata:
+  namespace: default
+  name: nginx-pod
+  labels:
+    app: nginx
+spec:
+  type: NodePort
+  selector:
+    app: nginx
+  ports:
+    port: 80
+    targetPort: 80
+    nodePort: 30000
+---
+kind: Deployment
+apiVersion: extensions/v1beta1 #指定api版本，此值必须在kubectl apiversion中
+metadata:   #资源的元数据/属性
+  name: nginx #资源的名字，在同一个namespace中必须唯一
+  namespace: default
+  labels:
+    name: nginx
+spec:   #specification of the resource content 指定该资源的内容
+ replicas: 1 #副本数量
+  template:  #这里Pod的定义
+    metadata:
+      labels:
+       app: nginx
+    spec:
+      containers:
+      - name: nginx  #容器的名字
+        image: nginx
