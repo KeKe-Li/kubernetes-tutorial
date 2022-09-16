@@ -1,3 +1,6 @@
+gitlab应用部署yaml:
+
+```bash
 apiVersion: v1
 kind: Service
 metadata:
@@ -31,4 +34,4 @@ spec:
         - name: gitlab-ce               # 容器名
           image: twang2218/gitlab-ce-zh:10.6.2 #镜像
           imagePullPolicy: Always
-
+```
